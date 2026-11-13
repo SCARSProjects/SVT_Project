@@ -49,7 +49,7 @@ export default function OrdersPage() {
     return (
       <main className="max-w-md mx-auto px-4 py-20 text-center">
         <h1 className="font-display text-2xl font-semibold text-ink mb-3">Sign in to view your orders</h1>
-        <Link href="/login" className="bg-marigold-400 hover:bg-marigold-500 text-ink font-semibold px-6 py-3 rounded-full transition-colors">
+        <Link href="/login?callbackUrl=/account/orders" className="bg-marigold-400 hover:bg-marigold-500 text-ink font-semibold px-6 py-3 rounded-full transition-colors">
           Sign In
         </Link>
       </main>

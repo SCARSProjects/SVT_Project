@@ -1,5 +1,7 @@
 import { createClient } from '@libsql/client';
 import { randomUUID } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 // Next.js's own CLI (next dev/build/start) auto-loads .env, but running this
 // module via plain `tsx` (e.g. the seed script) does not. Without this, the
@@ -13,6 +15,15 @@ try {
 
 const url = process.env.DATABASE_URL || "file:./data/shop.db";
 const authToken = process.env.DATABASE_AUTH_TOKEN;
+
+// Ensure local directory exists for file-based sqlite databases
+if (url.startsWith('file:')) {
+  const filePath = url.replace('file:', '');
+  const dir = path.dirname(path.resolve(filePath));
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
 
 if (process.env.NODE_ENV !== 'production') {
   console.log(`[db] connecting to: ${url.startsWith('file:') ? url : url.replace(/\/\/.*@/, '//***@')}`);
@@ -60,6 +71,7 @@ async function migrate(db: any) {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'CUSTOMER',
+      image TEXT,
       phone TEXT,
       address TEXT,
       createdAt TEXT NOT NULL
@@ -109,6 +121,8 @@ async function migrate(db: any) {
       productId TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       price REAL NOT NULL,
+      variantId TEXT,
+      variantLabel TEXT,
       FOREIGN KEY (orderId) REFERENCES orders(id),
       FOREIGN KEY (productId) REFERENCES products(id)
     );
@@ -125,17 +139,23 @@ async function migrate(db: any) {
       createdAt TEXT NOT NULL,
       FOREIGN KEY (productId) REFERENCES products(id)
     );
+
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    CREATE INDEX IF NOT EXISTS idx_products_category ON products(categoryId);
+    CREATE INDEX IF NOT EXISTS idx_products_featured ON products(featured);
+    CREATE INDEX IF NOT EXISTS idx_product_variants_product ON product_variants(productId);
+    CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(userId);
+    CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(createdAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(orderId);
   `);
 
-  // order_items gained variant-tracking columns after the original schema
-  // shipped. ALTER TABLE ADD COLUMN isn't idempotent in SQLite (there's no
-  // "IF NOT EXISTS" for columns), so guard each one against the "duplicate
-  // column" error a server that already has them would throw.
-  const orderItemColumnAdditions = [
+  // Column migrations for databases that predate new columns
+  const columnAdditions = [
+    'ALTER TABLE users ADD COLUMN image TEXT',
     'ALTER TABLE order_items ADD COLUMN variantId TEXT',
     'ALTER TABLE order_items ADD COLUMN variantLabel TEXT',
   ];
-  for (const stmt of orderItemColumnAdditions) {
+  for (const stmt of columnAdditions) {
     try {
       await db.exec(stmt);
     } catch (err: any) {
@@ -193,6 +213,7 @@ export type DBUser = {
   email: string;
   password: string;
   role: string;
+  image?: string | null;
   phone: string | null;
   address: string | null;
   createdAt: string;
@@ -467,7 +488,7 @@ export async function deleteProduct(id: string): Promise<void> {
 // ---------- Users ----------
 export async function getUserByEmail(email: string): Promise<DBUser | undefined> {
   const db = await getDb();
-  const row = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  const row = await db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email.trim());
   return row as unknown as DBUser | undefined;
 }
 
@@ -477,14 +498,37 @@ export async function getUserById(id: string): Promise<DBUser | undefined> {
   return row as unknown as DBUser | undefined;
 }
 
-export async function createUser(data: { name: string; email: string; password: string; role?: string }): Promise<DBUser> {
+export async function createUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  role?: string;
+  image?: string | null;
+  phone?: string | null;
+  address?: string | null;
+}): Promise<DBUser> {
   const db = await getDb();
   const id = randomUUID();
   const createdAt = new Date().toISOString();
   await db
-    .prepare('INSERT INTO users (id, name, email, password, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(id, data.name, data.email, data.password, data.role || 'CUSTOMER', createdAt);
+    .prepare('INSERT INTO users (id, name, email, password, role, image, phone, address, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(
+      id,
+      data.name,
+      data.email.toLowerCase().trim(),
+      data.password,
+      data.role || 'CUSTOMER',
+      data.image || null,
+      data.phone || null,
+      data.address || null,
+      createdAt
+    );
   return (await getUserByEmail(data.email))!;
+}
+
+export async function updateUserImage(id: string, image: string): Promise<void> {
+  const db = await getDb();
+  await db.prepare('UPDATE users SET image = ? WHERE id = ?').run(image, id);
 }
 
 // ---------- Orders ----------

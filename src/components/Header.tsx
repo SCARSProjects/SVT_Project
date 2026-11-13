@@ -60,7 +60,11 @@ export default function Header() {
           {mounted && session?.user ? (
             <div className="relative group hidden sm:block">
               <button className="flex items-center gap-1.5 text-sm hover:text-marigold-300 transition-colors">
-                <User size={20} />
+                {session.user.image ? (
+                  <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
+                ) : (
+                  <User size={20} />
+                )}
                 <span className="max-w-[100px] truncate">{session.user.name}</span>
               </button>
               <div className="absolute right-0 top-full pt-2 w-48 hidden group-hover:block">
@@ -116,6 +120,14 @@ export default function Header() {
           </form>
           {mounted && session?.user ? (
             <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2 pb-2 border-b border-ink-700 text-marigold-300">
+                {session.user.image ? (
+                  <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
+                ) : (
+                  <User size={18} />
+                )}
+                <span className="truncate">{session.user.name}</span>
+              </div>
               <Link href="/account/orders" onClick={() => setMenuOpen(false)}>My Orders</Link>
               {(session.user as any).role === 'ADMIN' && (
                 <Link href="/admin" onClick={() => setMenuOpen(false)}>Admin Panel</Link>

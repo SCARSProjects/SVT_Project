@@ -33,7 +33,7 @@ export default function CheckoutPage() {
       <main className="max-w-md mx-auto px-4 py-20 text-center">
         <h1 className="font-display text-2xl font-semibold text-ink mb-3">Please sign in to check out</h1>
         <p className="text-ink-400 mb-6">You need an account to place an order and track it later.</p>
-        <Link href="/login" className="bg-marigold-400 hover:bg-marigold-500 text-ink font-semibold px-6 py-3 rounded-full transition-colors">
+        <Link href="/login?callbackUrl=/checkout" className="bg-marigold-400 hover:bg-marigold-500 text-ink font-semibold px-6 py-3 rounded-full transition-colors">
           Sign In
         </Link>
       </main>
