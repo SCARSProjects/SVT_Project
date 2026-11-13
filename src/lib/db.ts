@@ -99,7 +99,7 @@ async function migrate(db: any) {
       featured INTEGER NOT NULL DEFAULT 0,
       categoryId TEXT NOT NULL,
       createdAt TEXT NOT NULL,
-      FOREIGN KEY (categoryId) REFERENCES categories(id)
+      FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS orders (
@@ -112,7 +112,7 @@ async function migrate(db: any) {
       shippingPhone TEXT NOT NULL,
       shippingAddress TEXT NOT NULL,
       createdAt TEXT NOT NULL,
-      FOREIGN KEY (userId) REFERENCES users(id)
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS order_items (
@@ -123,8 +123,8 @@ async function migrate(db: any) {
       price REAL NOT NULL,
       variantId TEXT,
       variantLabel TEXT,
-      FOREIGN KEY (orderId) REFERENCES orders(id),
-      FOREIGN KEY (productId) REFERENCES products(id)
+      FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS product_variants (
@@ -137,7 +137,7 @@ async function migrate(db: any) {
       image TEXT,
       sortOrder INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL,
-      FOREIGN KEY (productId) REFERENCES products(id)
+      FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
